@@ -1,161 +1,258 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOCX to Markdown Converter</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
-        .container { background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); padding: 48px; max-width: 520px; width: 90%; }
-        h1 { font-size: 24px; margin-bottom: 8px; }
-        .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
-        .drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 40px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer; margin-bottom: 20px; }
-        .drop-zone.dragover { border-color: #2563eb; background: #eff6ff; }
-        .drop-zone-icon { font-size: 36px; margin-bottom: 12px; }
-        .drop-zone-text { color: #666; font-size: 14px; }
-        .file-name { font-size: 13px; color: #2563eb; margin-bottom: 16px; word-break: break-all; display: none; }
-        input[type="file"] { display: none; }
-        .options { margin-bottom: 20px; }
-        .options label { font-size: 13px; color: #444; display: block; margin-bottom: 8px; }
-        select { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: white; }
-        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #94a3b8; cursor: not-allowed; }
-        .result { margin-top: 20px; padding: 16px; border-radius: 8px; display: none; }
-        .result.success { background: #f0fdf4; border: 1px solid #86efac; display: block; }
-        .result.error { background: #fef2f2; border: 1px solid #fca5a5; display: block; }
-        .result a { color: #2563eb; font-weight: 500; }
-        .warnings { font-size: 12px; color: #92400e; margin-top: 8px; }
-        .spinner { display: none; width: 20px; height: 20px; border: 2px solid #ccc; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto 12px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOCX to Markdown Converter</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; }
+
+/* === Sidebar === */
+.sidebar { width: 280px; background: #1e293b; color: #e2e8f0; display: flex; flex-direction: column; min-height: 100vh; flex-shrink: 0; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid #334155; }
+.sidebar-header h2 { font-size: 15px; font-weight: 600; }
+.sidebar-header p { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.sidebar-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.sidebar-empty { padding: 24px 16px; text-align: center; color: #64748b; font-size: 12px; }
+.sidebar-item { padding: 10px 20px; border-bottom: 1px solid #1e293b; cursor: default; transition: background 0.15s; font-size: 12px; }
+.sidebar-item:hover { background: #273548; }
+.sidebar-item .name { color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-item .meta { color: #94a3b8; margin-top: 2px; font-size: 11px; }
+.sidebar-item .meta span { margin-right: 10px; }
+.sidebar-item .time { color: #64748b; font-size: 10px; margin-top: 2px; }
+
+/* === Toast === */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { background: #166534; color: white; padding: 14px 20px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease; max-width: 360px; }
+.toast.error { background: #991b1b; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-msg { flex: 1; line-height: 1.4; }
+
+/* === Main === */
+.main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px; }
+.container { background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 48px; max-width: 520px; width: 100%; }
+h1 { font-size: 24px; margin-bottom: 4px; }
+.subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+.drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 40px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer; margin-bottom: 20px; }
+.drop-zone.dragover { border-color: #2563eb; background: #eff6ff; }
+.drop-zone-icon { font-size: 36px; margin-bottom: 12px; }
+.drop-zone-text { color: #666; font-size: 14px; }
+.file-name { font-size: 13px; color: #2563eb; margin-bottom: 16px; word-break: break-all; display: none; }
+input[type="file"] { display: none; }
+.options { margin-bottom: 20px; }
+.options label { font-size: 13px; color: #444; display: block; margin-bottom: 8px; }
+select { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: white; }
+button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+button:hover { background: #1d4ed8; }
+button:disabled { background: #94a3b8; cursor: not-allowed; }
+.spinner { display: none; width: 20px; height: 20px; border: 2px solid #ccc; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; margin: 12px auto 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.result { margin-top: 20px; padding: 16px; border-radius: 8px; display: none; }
+.result.success { background: #f0fdf4; border: 1px solid #86efac; display: block; }
+.result.error { background: #fef2f2; border: 1px solid #fca5a5; display: block; }
+.result a { color: #2563eb; font-weight: 500; }
+.warnings { font-size: 12px; color: #92400e; margin-top: 8px; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>DOCX → Markdown</h1>
-        <p class="subtitle">Upload a .docx file to convert it to Markdown</p>
 
-        <div class="drop-zone" id="dropZone">
-            <div class="drop-zone-icon">📄</div>
-            <p class="drop-zone-text">Drop .docx file here or click to browse</p>
-        </div>
-        <input type="file" id="fileInput" accept=".docx">
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h2>转换记录</h2>
+    <p>仅本次会话，关闭后消失</p>
+  </div>
+  <div class="sidebar-list" id="historyList">
+    <div class="sidebar-empty" id="historyEmpty">暂无转换记录</div>
+  </div>
+</aside>
 
-        <p class="file-name" id="fileName"></p>
+<!-- Main -->
+<div class="main">
+  <div class="container">
+    <h1>DOCX → Markdown</h1>
+    <p class="subtitle">Upload a .docx file to convert it to Markdown</p>
 
-        <div class="options">
-            <label>
-                <input type="checkbox" id="includeHF" checked> Include headers &amp; footers
-            </label>
-            <label style="margin-top: 12px;">Output format:</label>
-            <select id="outputFormat">
-                <option value="md">Markdown file (.md)</option>
-                <option value="zip">ZIP (.md + images)</option>
-            </select>
-        </div>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">&#x1F4C4;</div>
+      <p class="drop-zone-text">Drop .docx file here or click to browse</p>
+    </div>
+    <input type="file" id="fileInput" accept=".docx">
 
-        <div class="spinner" id="spinner"></div>
+    <p class="file-name" id="fileName"></p>
 
-        <button id="convertBtn" disabled>Convert to Markdown</button>
-
-        <div class="result" id="result"></div>
+    <div class="options">
+      <label>
+        <input type="checkbox" id="includeHF" checked> Include headers &amp; footers
+      </label>
+      <label style="margin-top: 12px;">Output format:</label>
+      <select id="outputFormat">
+        <option value="md">Markdown file (.md)</option>
+        <option value="zip">ZIP (.md + images)</option>
+      </select>
     </div>
 
-    <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
-        const convertBtn = document.getElementById('convertBtn');
-        const result = document.getElementById('result');
-        const spinner = document.getElementById('spinner');
-        let selectedFile = null;
+    <button id="convertBtn" disabled>Convert to Markdown</button>
+    <div class="spinner" id="spinner"></div>
+    <div class="result" id="result"></div>
+  </div>
+</div>
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length) handleFile(files[0]);
-        });
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length) handleFile(fileInput.files[0]);
-        });
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
 
-        function handleFile(file) {
-            if (!file.name.toLowerCase().endsWith('.docx')) {
-                showError('Please select a .docx file.');
-                return;
-            }
-            selectedFile = file;
-            fileName.textContent = 'Selected: ' + file.name;
-            fileName.style.display = 'block';
-            convertBtn.disabled = false;
-            result.style.display = 'none';
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const convertBtn = document.getElementById('convertBtn');
+const result = document.getElementById('result');
+const spinner = document.getElementById('spinner');
+const historyList = document.getElementById('historyList');
+const historyEmpty = document.getElementById('historyEmpty');
+const toastContainer = document.getElementById('toastContainer');
+let selectedFile = null;
+
+// === Toast ===
+function showToast(msg, isError) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.innerHTML = '<span class="toast-icon">' + (isError ? '&#x274C;' : '&#x2705;') + '</span>'
+        + '<span class="toast-msg">' + msg + '</span>';
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// === History ===
+let history = [];
+
+function addHistory(name, imgCount, fnCount, toc) {
+    const now = new Date();
+    const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item = { name, time, imgCount, fnCount, toc };
+    history.unshift(item);
+    if (history.length > 50) history.pop();
+    renderHistory();
+}
+
+function renderHistory() {
+    if (history.length === 0) {
+        historyEmpty.style.display = 'block';
+        historyList.querySelectorAll('.sidebar-item').forEach(el => el.remove());
+        return;
+    }
+    historyEmpty.style.display = 'none';
+    historyList.querySelectorAll('.sidebar-item').forEach(el => el.remove());
+    history.forEach((h, i) => {
+        const div = document.createElement('div');
+        div.className = 'sidebar-item';
+        const parts = [];
+        if (h.imgCount) parts.push(h.imgCount + ' pic');
+        if (h.fnCount) parts.push(h.fnCount + ' fn');
+        if (h.toc) parts.push('TOC');
+        div.innerHTML = '<div class="name" title="' + h.name + '">' + h.name + '</div>'
+            + (parts.length ? '<div class="meta">' + parts.join(' &middot; ') + '</div>' : '')
+            + '<div class="time">' + h.time + '</div>';
+        historyList.appendChild(div);
+    });
+}
+
+// === File handling ===
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+        showToast('Please select a .docx file.', true);
+        return;
+    }
+    selectedFile = file;
+    fileName.textContent = 'Selected: ' + file.name;
+    fileName.style.display = 'block';
+    convertBtn.disabled = false;
+    result.style.display = 'none';
+}
+
+// === Convert ===
+convertBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('include_headers_footers', document.getElementById('includeHF').checked);
+    formData.append('output_format', document.getElementById('outputFormat').value);
+
+    convertBtn.disabled = true;
+    spinner.style.display = 'block';
+    result.style.display = 'none';
+
+    try {
+        const resp = await fetch('/convert', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (resp.ok) {
+            showSuccess(data);
+            autoDownload(data);
+            addHistory(data.filename || selectedFile.name.replace('.docx', '.md'), data.image_count, data.footnote_count, data.toc_detected);
+            showToast('转换完成 &mdash; ' + (data.filename || 'output.md'));
+        } else {
+            showError(data.detail || 'Conversion failed.');
+            showToast(data.detail || '转换失败', true);
+            addHistory(selectedFile.name, 0, 0, false);
         }
+    } catch (err) {
+        showError('Network error: ' + err.message);
+        showToast('网络错误: ' + err.message, true);
+    } finally {
+        convertBtn.disabled = false;
+        spinner.style.display = 'none';
+    }
+});
 
-        convertBtn.addEventListener('click', async () => {
-            if (!selectedFile) return;
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('include_headers_footers', document.getElementById('includeHF').checked);
-            formData.append('output_format', document.getElementById('outputFormat').value);
+async function autoDownload(data) {
+    try {
+        const dlResp = await fetch(data.download_url);
+        const blob = await dlResp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.filename || 'output.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.warn('Auto-download failed:', err);
+    }
+}
 
-            convertBtn.disabled = true;
-            spinner.style.display = 'block';
-            result.style.display = 'none';
+function showSuccess(data) {
+    result.className = 'result success';
+    const parts = ['<strong>转换完成，正在自动下载...</strong>'];
+    if (data.image_count) parts.push('图片: ' + data.image_count);
+    if (data.footnote_count) parts.push('脚注: ' + data.footnote_count);
+    if (data.toc_detected) parts.push('检测到目录');
+    if (data.warnings.length) parts.push('警告: ' + data.warnings.join(', '));
+    result.innerHTML = parts.join('<br>');
+}
 
-            try {
-                const resp = await fetch('/convert', { method: 'POST', body: formData });
-                const data = await resp.json();
-                if (resp.ok) {
-                    showSuccess(data);
-                    autoDownload(data);
-                } else {
-                    showError(data.detail || 'Conversion failed.');
-                }
-            } catch (err) {
-                showError('Network error: ' + err.message);
-            } finally {
-                convertBtn.disabled = false;
-                spinner.style.display = 'none';
-            }
-        });
-
-        async function autoDownload(data) {
-            try {
-                const dlResp = await fetch(data.download_url);
-                const blob = await dlResp.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = data.filename || 'output.md';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (err) {
-                console.warn('Auto-download failed:', err);
-            }
-        }
-
-        function showSuccess(data) {
-            result.className = 'result success';
-            const parts = ['<strong>转换完成，正在自动下载...</strong>'];
-            if (data.image_count) parts.push('图片: ' + data.image_count);
-            if (data.footnote_count) parts.push('脚注: ' + data.footnote_count);
-            if (data.toc_detected) parts.push('检测到目录');
-            if (data.warnings.length) parts.push('警告: ' + data.warnings.join(', '));
-            result.innerHTML = parts.join('<br>')
-                + '<br><a href="' + data.download_url + '" download>重新下载 ' + (data.filename || 'output.md') + '</a>';
-        }
-
-        function showError(msg) {
-            result.className = 'result error';
-            result.textContent = msg;
-        }
-    </script>
+function showError(msg) {
+    result.className = 'result error';
+    result.textContent = msg;
+}
+</script>
 </body>
 </html>
