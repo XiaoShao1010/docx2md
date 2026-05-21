@@ -114,7 +114,7 @@ async def download(job_id: str, format: str = "md"):
         raise HTTPException(410, "Output file no longer available")
 
     output_path = job.output_path
-    if format == "zip":
+    if output_path.suffix == ".zip":
         media_type = "application/zip"
         dl_name = "result.zip"
     else:

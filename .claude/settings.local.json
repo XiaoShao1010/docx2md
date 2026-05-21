@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"d:/project/docx2md\" config --list)",
+      "Bash(git -C \"d:/project/docx2md\" remote -v)",
+      "Bash(pip install *)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}
