@@ -93,6 +93,13 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
         <option value="md">Markdown file (.md)</option>
         <option value="zip">ZIP (.md + images)</option>
       </select>
+      <label style="margin-top: 12px;">Image format:</label>
+      <select id="imageFormat">
+        <option value="original">Original (no conversion)</option>
+        <option value="png">PNG</option>
+        <option value="jpg">JPEG (compressed)</option>
+        <option value="webp">WebP (recommended)</option>
+      </select>
     </div>
 
     <button id="convertBtn" disabled>Convert to Markdown</button>
@@ -132,10 +139,10 @@ function showToast(msg, isError) {
 // === History ===
 let history = [];
 
-function addHistory(name, imgCount, fnCount, toc) {
+function addHistory(name, imgCount, fnCount, toc, mathCount, tocGen) {
     const now = new Date();
     const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const item = { name, time, imgCount, fnCount, toc };
+    const item = { name, time, imgCount, fnCount, toc, mathCount: mathCount || 0, tocGen: tocGen || false };
     history.unshift(item);
     if (history.length > 50) history.pop();
     renderHistory();
@@ -156,6 +163,8 @@ function renderHistory() {
         if (h.imgCount) parts.push(h.imgCount + ' pic');
         if (h.fnCount) parts.push(h.fnCount + ' fn');
         if (h.toc) parts.push('TOC');
+        if (h.mathCount) parts.push(h.mathCount + ' math');
+        if (h.tocGen) parts.push('TOC-Gen');
         div.innerHTML = '<div class="name" title="' + h.name + '">' + h.name + '</div>'
             + (parts.length ? '<div class="meta">' + parts.join(' &middot; ') + '</div>' : '')
             + '<div class="time">' + h.time + '</div>';
@@ -195,6 +204,7 @@ convertBtn.addEventListener('click', async () => {
     formData.append('file', selectedFile);
     formData.append('include_headers_footers', document.getElementById('includeHF').checked);
     formData.append('output_format', document.getElementById('outputFormat').value);
+    formData.append('image_format', document.getElementById('imageFormat').value);
 
     convertBtn.disabled = true;
     spinner.style.display = 'block';
@@ -206,12 +216,12 @@ convertBtn.addEventListener('click', async () => {
         if (resp.ok) {
             showSuccess(data);
             autoDownload(data);
-            addHistory(data.filename || selectedFile.name.replace('.docx', '.md'), data.image_count, data.footnote_count, data.toc_detected);
+            addHistory(data.filename || selectedFile.name.replace('.docx', '.md'), data.image_count, data.footnote_count, data.toc_detected, data.math_formula_count, data.toc_generated);
             showToast('转换完成 &mdash; ' + (data.filename || 'output.md'));
         } else {
             showError(data.detail || 'Conversion failed.');
             showToast(data.detail || '转换失败', true);
-            addHistory(selectedFile.name, 0, 0, false);
+            addHistory(selectedFile.name, 0, 0, false, 0, false);
         }
     } catch (err) {
         showError('Network error: ' + err.message);
@@ -245,6 +255,8 @@ function showSuccess(data) {
     if (data.image_count) parts.push('图片: ' + data.image_count);
     if (data.footnote_count) parts.push('脚注: ' + data.footnote_count);
     if (data.toc_detected) parts.push('检测到目录');
+    if (data.toc_generated) parts.push('已生成目录');
+    if (data.math_formula_count) parts.push('数学公式: ' + data.math_formula_count);
     if (data.warnings.length) parts.push('警告: ' + data.warnings.join(', '));
     result.innerHTML = parts.join('<br>');
 }

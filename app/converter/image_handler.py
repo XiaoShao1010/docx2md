@@ -80,6 +80,48 @@ def _ext_to_mime(ext: str) -> str:
     return mime_map.get(ext, "application/octet-stream")
 
 
+def convert_image_format(
+    image_path: Path, target_format: str, quality: int = 85
+) -> Path:
+    """Convert an image to the target format using Pillow.
+
+    Args:
+        image_path: Path to the source image.
+        target_format: "png", "jpg", "webp" (or "original" to skip).
+        quality: Compression quality 1-100 for jpg/webp.
+
+    Returns:
+        Path to the converted image (may be same as input if format unchanged).
+    """
+    if target_format == "original":
+        return image_path
+
+    from PIL import Image
+
+    img = Image.open(image_path)
+    target_format = target_format.lower()
+
+    if target_format in ("jpg", "jpeg"):
+        new_path = image_path.with_suffix(".jpg")
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.save(new_path, "JPEG", quality=quality)
+    elif target_format == "webp":
+        new_path = image_path.with_suffix(".webp")
+        img.save(new_path, "WEBP", quality=quality)
+    elif target_format == "png":
+        new_path = image_path.with_suffix(".png")
+        img.save(new_path, "PNG")
+    else:
+        return image_path
+
+    # Delete original if different from new
+    if new_path != image_path and image_path.exists():
+        image_path.unlink()
+
+    return new_path
+
+
 def extract_images(docx_content, image_dir: Path) -> dict:
     """Extract images from docx2python content to the specified directory."""
     image_dir = Path(image_dir)

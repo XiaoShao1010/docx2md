@@ -8,6 +8,7 @@ def assemble_markdown(
     body_lines: list[str],
     footnote_lines: list[str],
     footer_lines: list[str],
+    toc_markdown: str | None = None,
 ) -> str:
     """Assemble all sections into a complete markdown document.
 
@@ -18,6 +19,7 @@ def assemble_markdown(
         body_lines: Markdown lines for document body.
         footnote_lines: Markdown lines for footnotes/endnotes.
         footer_lines: Markdown lines for footers.
+        toc_markdown: Optional generated TOC to replace [TOC] placeholder.
 
     Returns:
         Complete markdown document as a single string.
@@ -31,6 +33,10 @@ def assemble_markdown(
                 sections.append(text)
 
     result = "\n\n".join(sections)
+
+    # Replace [TOC] placeholder with generated TOC
+    if toc_markdown:
+        result = result.replace("[TOC]", toc_markdown)
 
     # Clean up: no more than 2 consecutive blank lines
     while "\n\n\n" in result:

@@ -14,6 +14,8 @@ class Job:
     image_count: int = 0
     footnote_count: int = 0
     toc_detected: bool = False
+    toc_generated: bool = False
+    math_formula_count: int = 0
     warnings: list[str] = field(default_factory=list)
     output_path: Path | None = None
     created_at: float = field(default_factory=time.time)

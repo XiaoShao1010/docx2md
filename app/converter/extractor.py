@@ -1,8 +1,11 @@
 """Wrap docx2python and python-docx to provide unified document content access.
 
-docx2python is the primary engine. python-docx is used only for:
+docx2python is the primary engine. python-docx is used for:
 1. Reading section properties to map headers/footers to sections.
 2. Accessing OOXML field codes for TOC detection.
+3. Accessing numbering definitions for list start values.
+4. Accessing bookmark elements for cross-reference handling.
+5. Accessing OMML math elements for LaTeX conversion.
 """
 
 from pathlib import Path
@@ -11,6 +14,9 @@ from docx2python import docx2python
 from docx2python.docx_output import DocxContent
 from docx import Document as DocxDocument
 from lxml import etree
+
+from app.converter.numbering_handler import NumberingHandler
+from app.converter.cross_reference_handler import CrossReferenceHandler
 
 
 class ExtractedDocx:
@@ -22,6 +28,8 @@ class ExtractedDocx:
             str(docx_path), image_folder=image_folder, html=True, duplicate_merged_cells=True
         )
         self._python_docx = DocxDocument(str(docx_path))
+        self._numbering_handler: NumberingHandler | None = None
+        self._cross_ref_handler: CrossReferenceHandler | None = None
 
     @property
     def body_pars(self):
@@ -57,6 +65,25 @@ class ExtractedDocx:
     def core_properties(self) -> dict:
         """Return document core properties (title, creator, etc.)."""
         return self.content.core_properties
+
+    @property
+    def python_docx(self):
+        """Return the underlying python-docx Document for OOXML access."""
+        return self._python_docx
+
+    @property
+    def numbering_handler(self) -> NumberingHandler:
+        """Return the numbering handler (lazy-init)."""
+        if self._numbering_handler is None:
+            self._numbering_handler = NumberingHandler(self._python_docx)
+        return self._numbering_handler
+
+    @property
+    def cross_reference_handler(self) -> CrossReferenceHandler:
+        """Return the cross-reference handler (lazy-init)."""
+        if self._cross_ref_handler is None:
+            self._cross_ref_handler = CrossReferenceHandler(self._python_docx)
+        return self._cross_ref_handler
 
     def has_toc_field(self) -> bool:
         """Check if the document contains a TOC field code in its XML."""

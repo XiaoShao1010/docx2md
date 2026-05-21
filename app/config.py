@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     temp_file_ttl_minutes: int = 30
     upload_dir: Path = Path("uploads")
     output_dir: Path = Path("outputs")
+    image_format: str = "original"
+    image_quality: int = 85
     log_level: str = "info"
 
     @property

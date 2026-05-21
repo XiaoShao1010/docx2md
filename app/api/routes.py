@@ -40,6 +40,8 @@ async def convert(
     include_headers_footers: bool = Form(default=True),
     output_format: str = Form(default="md"),
     style_map: str | None = Form(default=None),
+    image_format: str = Form(default="original"),
+    image_quality: int = Form(default=85),
 ):
     """Upload a DOCX file and convert it to Markdown."""
     filename = await validate_docx(file)
@@ -71,12 +73,16 @@ async def convert(
             output_format=output_format,
             include_headers_footers=include_headers_footers,
             custom_style_map=custom_style,
+            image_format=image_format,
+            image_quality=image_quality,
         )
 
         job.status = "completed"
         job.image_count = conv_result.image_count
         job.footnote_count = conv_result.footnote_count
         job.toc_detected = conv_result.toc_detected
+        job.toc_generated = conv_result.toc_generated
+        job.math_formula_count = conv_result.math_formula_count
         job.warnings = conv_result.warnings
         job.output_path = output_path
 
@@ -87,6 +93,8 @@ async def convert(
             image_count=job.image_count,
             footnote_count=job.footnote_count,
             toc_detected=job.toc_detected,
+            toc_generated=job.toc_generated,
+            math_formula_count=job.math_formula_count,
             warnings=job.warnings,
             download_url=f"/download/{job_id}?format={output_format}",
         )
