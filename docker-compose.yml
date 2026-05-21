@@ -1,0 +1,22 @@
+services:
+  docx2md:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+      - outputs_data:/app/outputs
+    environment:
+      - DOCX2MD_MAX_FILE_SIZE_MB=50
+      - DOCX2MD_LOG_LEVEL=info
+      - DOCX2MD_TEMP_FILE_TTL_MINUTES=30
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  uploads_data:
+  outputs_data:

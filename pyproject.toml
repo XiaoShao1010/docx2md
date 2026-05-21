@@ -1,0 +1,5 @@
+[project]
+name = "docx2md"
+version = "1.0.0"
+description = "DOCX to Markdown web converter"
+requires-python = ">=3.12"

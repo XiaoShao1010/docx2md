@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCX to Markdown Converter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .container { background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); padding: 48px; max-width: 520px; width: 90%; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 40px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer; margin-bottom: 20px; }
+        .drop-zone.dragover { border-color: #2563eb; background: #eff6ff; }
+        .drop-zone-icon { font-size: 36px; margin-bottom: 12px; }
+        .drop-zone-text { color: #666; font-size: 14px; }
+        .file-name { font-size: 13px; color: #2563eb; margin-bottom: 16px; word-break: break-all; display: none; }
+        input[type="file"] { display: none; }
+        .options { margin-bottom: 20px; }
+        .options label { font-size: 13px; color: #444; display: block; margin-bottom: 8px; }
+        select { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: white; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 16px; border-radius: 8px; display: none; }
+        .result.success { background: #f0fdf4; border: 1px solid #86efac; display: block; }
+        .result.error { background: #fef2f2; border: 1px solid #fca5a5; display: block; }
+        .result a { color: #2563eb; font-weight: 500; }
+        .warnings { font-size: 12px; color: #92400e; margin-top: 8px; }
+        .spinner { display: none; width: 20px; height: 20px; border: 2px solid #ccc; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DOCX → Markdown</h1>
+        <p class="subtitle">Upload a .docx file to convert it to Markdown</p>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📄</div>
+            <p class="drop-zone-text">Drop .docx file here or click to browse</p>
+        </div>
+        <input type="file" id="fileInput" accept=".docx">
+
+        <p class="file-name" id="fileName"></p>
+
+        <div class="options">
+            <label>
+                <input type="checkbox" id="includeHF" checked> Include headers &amp; footers
+            </label>
+            <label style="margin-top: 12px;">Output format:</label>
+            <select id="outputFormat">
+                <option value="md">Markdown file (.md)</option>
+                <option value="zip">ZIP (.md + images)</option>
+            </select>
+        </div>
+
+        <div class="spinner" id="spinner"></div>
+
+        <button id="convertBtn" disabled>Convert to Markdown</button>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const convertBtn = document.getElementById('convertBtn');
+        const result = document.getElementById('result');
+        const spinner = document.getElementById('spinner');
+        let selectedFile = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) handleFile(files[0]);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) handleFile(fileInput.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.docx')) {
+                showError('Please select a .docx file.');
+                return;
+            }
+            selectedFile = file;
+            fileName.textContent = 'Selected: ' + file.name;
+            fileName.style.display = 'block';
+            convertBtn.disabled = false;
+            result.style.display = 'none';
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('include_headers_footers', document.getElementById('includeHF').checked);
+            formData.append('output_format', document.getElementById('outputFormat').value);
+
+            convertBtn.disabled = true;
+            spinner.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                const resp = await fetch('/convert', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showSuccess(data);
+                } else {
+                    showError(data.detail || 'Conversion failed.');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                convertBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+
+        function showSuccess(data) {
+            result.className = 'result success';
+            result.innerHTML = '<strong>Conversion complete!</strong><br>'
+                + '<a href="' + data.download_url + '" download>Download ' + (data.filename || 'output.md') + '</a>'
+                + (data.image_count ? '<br>Images: ' + data.image_count : '')
+                + (data.footnote_count ? '<br>Footnotes: ' + data.footnote_count : '')
+                + (data.toc_detected ? '<br>TOC detected' : '')
+                + (data.warnings.length ? '<div class="warnings">Warnings: ' + data.warnings.join(', ') + '</div>' : '');
+        }
+
+        function showError(msg) {
+            result.className = 'result error';
+            result.textContent = msg;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.git/
+.env
+tests/
+outputs/
+uploads/
+README.md
+docker-compose.yml
+requirements-dev.txt
