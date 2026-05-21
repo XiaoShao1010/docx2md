@@ -70,6 +70,8 @@ Open http://localhost:8000 for the upload UI, or http://localhost:8000/docs for 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DOCX2MD_UPLOAD_DIR` | `uploads` | Uploaded files directory |
+| `DOCX2MD_OUTPUT_DIR` | `outputs` | Converted output directory |
 | `DOCX2MD_MAX_FILE_SIZE_MB` | `50` | Maximum upload file size |
 | `DOCX2MD_LOG_LEVEL` | `info` | Logging level |
 | `DOCX2MD_TEMP_FILE_TTL_MINUTES` | `30` | How long to keep converted files |

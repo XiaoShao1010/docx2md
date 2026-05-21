@@ -71,6 +71,8 @@ uvicorn app.main:app --reload
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
+| `DOCX2MD_UPLOAD_DIR` | `uploads` | 上传文件存放目录 |
+| `DOCX2MD_OUTPUT_DIR` | `outputs` | 转换结果输出目录 |
 | `DOCX2MD_MAX_FILE_SIZE_MB` | `50` | 上传文件大小上限 |
 | `DOCX2MD_LOG_LEVEL` | `info` | 日志级别 |
 | `DOCX2MD_TEMP_FILE_TTL_MINUTES` | `30` | 转换文件保留时长 |

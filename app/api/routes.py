@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
@@ -16,6 +17,13 @@ logger = logging.getLogger("docx2md")
 router = APIRouter()
 
 
+def _get_template_path() -> Path:
+    """Get the template path, handling PyInstaller bundled mode."""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "app" / "templates" / "index.html"
+    return Path(__file__).parent.parent / "templates" / "index.html"
+
+
 @router.get("/health")
 async def health_check():
     return {"status": "ok", "version": "1.0.0"}
@@ -23,8 +31,7 @@ async def health_check():
 
 @router.get("/")
 async def index():
-    template_path = Path(__file__).parent.parent / "templates" / "index.html"
-    return HTMLResponse(template_path.read_text(encoding="utf-8"))
+    return HTMLResponse(_get_template_path().read_text(encoding="utf-8"))
 
 
 @router.post("/convert")

@@ -1,8 +1,10 @@
+dist/
+build/
+*.spec.bak
 __pycache__/
 *.pyc
 .env
 uploads/
 outputs/
 *.egg-info/
-dist/
 .pytest_cache/

@@ -112,6 +112,7 @@
                 const data = await resp.json();
                 if (resp.ok) {
                     showSuccess(data);
+                    autoDownload(data);
                 } else {
                     showError(data.detail || 'Conversion failed.');
                 }
@@ -123,14 +124,32 @@
             }
         });
 
+        async function autoDownload(data) {
+            try {
+                const dlResp = await fetch(data.download_url);
+                const blob = await dlResp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename || 'output.md';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.warn('Auto-download failed:', err);
+            }
+        }
+
         function showSuccess(data) {
             result.className = 'result success';
-            result.innerHTML = '<strong>Conversion complete!</strong><br>'
-                + '<a href="' + data.download_url + '" download>Download ' + (data.filename || 'output.md') + '</a>'
-                + (data.image_count ? '<br>Images: ' + data.image_count : '')
-                + (data.footnote_count ? '<br>Footnotes: ' + data.footnote_count : '')
-                + (data.toc_detected ? '<br>TOC detected' : '')
-                + (data.warnings.length ? '<div class="warnings">Warnings: ' + data.warnings.join(', ') + '</div>' : '');
+            const parts = ['<strong>转换完成，正在自动下载...</strong>'];
+            if (data.image_count) parts.push('图片: ' + data.image_count);
+            if (data.footnote_count) parts.push('脚注: ' + data.footnote_count);
+            if (data.toc_detected) parts.push('检测到目录');
+            if (data.warnings.length) parts.push('警告: ' + data.warnings.join(', '));
+            result.innerHTML = parts.join('<br>')
+                + '<br><a href="' + data.download_url + '" download>重新下载 ' + (data.filename || 'output.md') + '</a>';
         }
 
         function showError(msg) {

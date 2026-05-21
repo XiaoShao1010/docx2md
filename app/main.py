@@ -28,6 +28,9 @@ async def periodic_cleanup(interval_seconds: int = 600):
 async def lifespan(app: FastAPI):
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Upload dir:  %s", settings.upload_dir.resolve())
+    logger.info("Output dir:  %s", settings.output_dir.resolve())
+    logger.info("Max upload:  %d MB", settings.max_file_size_mb)
     cleanup_task = asyncio.create_task(periodic_cleanup())
     yield
     cleanup_task.cancel()
