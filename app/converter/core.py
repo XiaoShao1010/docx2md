@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.config import settings
 from app.converter.extractor import ExtractedDocx
-from app.converter.image_handler import build_image_map, extract_images
+from app.converter.image_handler import build_image_map, build_image_data_uris, extract_images
 from app.converter.header_footer_handler import convert_headers, convert_footers
 from app.converter.footnote_handler import FootnoteCollector
 from app.converter.paragraph_handler import ParagraphHandler
@@ -95,9 +95,19 @@ def convert_docx(
     # Step 8: Assemble and write markdown
     footnote_defs = footnote_collector.get_definitions()
     markdown_text = assemble_markdown(header_lines, body_lines, footnote_defs, footer_lines)
+
+    # Step 9: Embed images as base64 data URIs for md output (self-contained)
+    if output_format == "md" and extracted.images:
+        data_uris = build_image_data_uris(extracted.images, image_dir)
+        for filename, uri in data_uris.items():
+            alt = filename.rsplit(".", 1)[0] if "." in filename else filename
+            old_ref = f"![{alt}]({image_map[filename]})"
+            new_ref = f"![{alt}]({uri})"
+            markdown_text = markdown_text.replace(old_ref, new_ref)
+
     write_markdown(markdown_text, md_output_path)
 
-    # Step 9: Package
+    # Step 10: Package
     if output_format == "zip":
         zip_path = output_dir / "result.zip"
         create_zip(md_output_path, image_dir, zip_path)

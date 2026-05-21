@@ -93,19 +93,16 @@ def format_par_runs(runs, image_map: dict[str, str] | None = None) -> str:
 def replace_image_placeholders(text: str, image_map: dict[str, str]) -> str:
     """Replace image placeholders with markdown image references.
 
-    docx2python uses placeholders like ``----image1.jpg----`` in the text.
-
-    Args:
-        text: Text containing image placeholders.
-        image_map: Dict mapping image filename -> relative path.
-
-    Returns:
-        Text with image placeholders replaced by ![alt](path) markdown.
+    docx2python uses placeholders like ``----media/image1.jpg----`` in text,
+    but the image_map keys are just the base filenames like ``image1.jpg``.
     """
     for filename, rel_path in image_map.items():
-        placeholder = f"----{filename}----"
         alt = filename.rsplit(".", 1)[0] if "." in filename else filename
-        text = text.replace(placeholder, f"![{alt}]({rel_path})")
+        md_ref = f"![{alt}]({rel_path})"
+        # docx2python uses ----media/filename---- format
+        text = text.replace(f"----media/{filename}----", md_ref)
+        # Also check bare ----filename---- format
+        text = text.replace(f"----{filename}----", md_ref)
     return text
 
 
